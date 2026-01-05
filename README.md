@@ -75,7 +75,7 @@ mobile_movie_app/
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/mobile_movie_app.git
+   git clone https://github.com/Cheneba/mobile_movie_app.git
    cd mobile_movie_app
 
 2. **Install dependencies**
