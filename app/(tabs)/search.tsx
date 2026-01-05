@@ -1,11 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Dimensions,
+    FlatList,
     Image,
-    ScrollView,
     StyleSheet,
     Text,
     TextInput,
@@ -13,252 +13,170 @@ import {
     View,
 } from 'react-native';
 
+import {
+    fetchMovies,
+    formatRating,
+    getGenreNames,
+    getImageUrl,
+    Movie,
+} from '@/services/api';
+import useFetch from '@/services/useFetch';
+
 const { width } = Dimensions.get('window');
 
-// Genre filters
-const genres = ['All', 'Adventure', 'Action', 'Comedy', 'Romance', 'Horror', 'Sci-Fi'];
+const MovieCard = ({ movie, index }: { movie: Movie; index: number }) => {
+    const genreNames = getGenreNames(movie.genre_ids);
+    const genreText = genreNames.length > 0 ? `${genreNames[0]} • Movie` : 'Movie';
 
-// Mock movie data
-const allMovies = [
-    {
-        id: 1,
-        title: 'Venom: The Last...',
-        poster: 'https://image.tmdb.org/t/p/w500/aosm8NMQ3UyoBVpSxyimorCQykC.jpg',
-        rating: 4.6,
-        genre: 'Action • Movie',
-        genres: ['Action', 'Sci-Fi'],
-    },
-    {
-        id: 2,
-        title: 'Moana 2',
-        poster: 'https://image.tmdb.org/t/p/w500/yh64qw9mgXBvlaWDi7Q9tpUBAvH.jpg',
-        rating: 4.6,
-        genre: 'Adventure • Movie',
-        genres: ['Adventure', 'Comedy'],
-    },
-    {
-        id: 3,
-        title: 'Wicked',
-        poster: 'https://image.tmdb.org/t/p/w500/xDGbZ0JJ3mYaGKy4Nzd9Kph6M9L.jpg',
-        rating: 4.6,
-        genre: 'Action • Movie',
-        genres: ['Adventure', 'Romance'],
-    },
-    {
-        id: 4,
-        title: 'Werewolves',
-        poster: 'https://image.tmdb.org/t/p/w500/cRTctVlwvMdXVsaYbX5qfkittDP.jpg',
-        rating: 4.6,
-        genre: 'Horror • Movie',
-        genres: ['Horror', 'Action'],
-    },
-    {
-        id: 5,
-        title: 'Aftermath...',
-        poster: 'https://image.tmdb.org/t/p/w500/euYIwmwkmz95mnXvufEmbL6ovhZ.jpg',
-        rating: 4.6,
-        genre: 'Action • Movie',
-        genres: ['Action'],
-    },
-    {
-        id: 6,
-        title: 'Red One...',
-        poster: 'https://image.tmdb.org/t/p/w500/cdqLnri3NEGcmfnqwk2TSIYtddg.jpg',
-        rating: 4.6,
-        genre: 'Comedy • Movie',
-        genres: ['Comedy', 'Action'],
-    },
-    {
-        id: 7,
-        title: 'Gladiator II',
-        poster: 'https://image.tmdb.org/t/p/w500/2cxhvwyEwRlysAmRH4iodkvo0z5.jpg',
-        rating: 4.6,
-        genre: 'Action • Movie',
-        genres: ['Action', 'Adventure'],
-    },
-    {
-        id: 8,
-        title: 'Kraven the Hunter',
-        poster: 'https://image.tmdb.org/t/p/w500/i47IUSsN126K11JUzqQIOi1Mg1M.jpg',
-        rating: 4.6,
-        genre: 'Action • Movie',
-        genres: ['Action', 'Sci-Fi'],
-    },
-    {
-        id: 9,
-        title: 'Mufasa: The Lion...',
-        poster: 'https://image.tmdb.org/t/p/w500/lurEK87kukWNaHd0zYnsi3yzJrs.jpg',
-        rating: 4.6,
-        genre: 'Adventure • Movie',
-        genres: ['Adventure', 'Comedy'],
-    },
-];
-
-type Movie = typeof allMovies[0];
-
-const MovieCard = ({ movie, index }: { movie: Movie; index: number }) => (
-    <TouchableOpacity
-        style={styles.movieCard}
-        onPress={() => router.push(`/movies/${movie.id}`)}
-        activeOpacity={0.7}
-    >
-        <View style={styles.movieImageContainer}>
-            <Image source={{ uri: movie.poster }} style={styles.movieImage} />
-            {index < 10 && (
-                <View style={styles.rankBadge}>
-                    <Text style={styles.rankText}>{index + 1}</Text>
-                </View>
-            )}
-        </View>
-        <Text style={styles.movieTitle} numberOfLines={1}>{movie.title}</Text>
-        <View style={styles.movieRating}>
-            <Ionicons name="star" size={12} color="#FFD700" />
-            <Text style={styles.movieRatingText}>{movie.rating}</Text>
-        </View>
-        <Text style={styles.movieGenre}>{movie.genre}</Text>
-    </TouchableOpacity>
-);
+    return (
+        <TouchableOpacity
+            style={styles.movieCard}
+            onPress={() => router.push(`/movies/${movie.id}`)}
+            activeOpacity={0.7}
+        >
+            <View style={styles.movieImageContainer}>
+                <Image
+                    source={{ uri: getImageUrl(movie.poster_path) }}
+                    style={styles.movieImage}
+                />
+                {index < 10 && (
+                    <View style={styles.rankBadge}>
+                        <Text style={styles.rankText}>{index + 1}</Text>
+                    </View>
+                )}
+            </View>
+            <Text style={styles.movieTitle} numberOfLines={1}>
+                {movie.title}
+            </Text>
+            <View style={styles.movieRating}>
+                <Ionicons name="star" size={12} color="#FFD700" />
+                <Text style={styles.movieRatingText}>{formatRating(movie.vote_average)}</Text>
+            </View>
+            <Text style={styles.movieGenre}>{genreText}</Text>
+        </TouchableOpacity>
+    );
+};
 
 const Search = () => {
     const [searchQuery, setSearchQuery] = useState('');
-    const [selectedGenre, setSelectedGenre] = useState('All');
-    const [isSearching, setIsSearching] = useState(false);
 
-    // Filter movies based on search query and selected genre
-    const filteredMovies = useMemo(() => {
-        let results = allMovies;
+    const {
+        data: movies,
+        loading,
+        error,
+        refetch,
+        reset,
+    } = useFetch<Movie[]>(() => fetchMovies({ query: searchQuery }), false);
 
-        // Filter by search query
-        if (searchQuery.trim()) {
-            const query = searchQuery.toLowerCase();
-            results = results.filter(movie =>
-                movie.title.toLowerCase().includes(query)
-            );
-        }
+    // Fetch initial popular movies
+    useEffect(() => {
+        refetch();
+    }, []);
 
-        // Filter by genre
-        if (selectedGenre !== 'All') {
-            results = results.filter(movie =>
-                movie.genres.includes(selectedGenre)
-            );
-        }
+    // Debounced search
+    useEffect(() => {
+        const timeoutId = setTimeout(() => {
+            refetch();
+        }, 500);
 
-        return results;
-    }, [searchQuery, selectedGenre]);
+        return () => clearTimeout(timeoutId);
+    }, [searchQuery]);
 
-    const handleSearch = (text: string) => {
-        setIsSearching(true);
-        setSearchQuery(text);
-        // Simulate search delay
-        setTimeout(() => setIsSearching(false), 300);
+    const handleClearSearch = () => {
+        setSearchQuery('');
+        reset();
+        // Refetch popular movies
+        setTimeout(() => refetch(), 100);
     };
 
     return (
         <View style={styles.container}>
-            <ScrollView
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.scrollContent}
-            >
-                {/* Logo */}
-                <View style={styles.logoContainer}>
-                    <View style={styles.logo}>
-                        <View style={[styles.logoTriangle, styles.logoYellow]} />
-                        <View style={[styles.logoTriangle, styles.logoPink]} />
-                        <View style={[styles.logoTriangle, styles.logoBlue]} />
-                    </View>
+            {/* Logo */}
+            <View style={styles.logoContainer}>
+                <View style={styles.logo}>
+                    <View style={[styles.logoTriangle, styles.logoYellow]} />
+                    <View style={[styles.logoTriangle, styles.logoPink]} />
+                    <View style={[styles.logoTriangle, styles.logoBlue]} />
                 </View>
+            </View>
 
-                {/* Search Bar */}
-                <View style={styles.searchBar}>
-                    <Ionicons name="search" size={20} color="#A8B5DB" />
-                    <TextInput
-                        style={styles.searchInput}
-                        placeholder="Search through 300+ movies online"
-                        placeholderTextColor="#A8B5DB"
-                        value={searchQuery}
-                        onChangeText={handleSearch}
-                        autoFocus={false}
-                        returnKeyType="search"
-                    />
-                    {searchQuery.length > 0 && (
-                        <TouchableOpacity onPress={() => setSearchQuery('')}>
-                            <Ionicons name="close-circle" size={20} color="#A8B5DB" />
-                        </TouchableOpacity>
+            {/* Search Bar */}
+            <View style={styles.searchBar}>
+                <Ionicons name="search" size={20} color="#A8B5DB" />
+                <TextInput
+                    style={styles.searchInput}
+                    placeholder="Search through 300+ movies online"
+                    placeholderTextColor="#A8B5DB"
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    autoFocus={false}
+                    returnKeyType="search"
+                    autoCorrect={false}
+                />
+                {searchQuery.length > 0 && (
+                    <TouchableOpacity onPress={handleClearSearch}>
+                        <Ionicons name="close-circle" size={20} color="#A8B5DB" />
+                    </TouchableOpacity>
+                )}
+            </View>
+
+            {/* Search Results Header */}
+            {searchQuery.trim() ? (
+                <View style={styles.resultsHeader}>
+                    <Text style={styles.resultsTitle}>
+                        Search results for{' '}
+                        <Text style={styles.queryText}>{searchQuery}</Text>
+                    </Text>
+                </View>
+            ) : (
+                <View style={styles.resultsHeader}>
+                    <Text style={styles.resultsTitle}>Popular Movies</Text>
+                </View>
+            )}
+
+            {/* Loading State */}
+            {loading && (
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color="#AB8BFF" />
+                    <Text style={styles.loadingText}>Loading movies...</Text>
+                </View>
+            )}
+
+            {/* Error State */}
+            {error && !loading && (
+                <View style={styles.emptyContainer}>
+                    <Ionicons name="alert-circle-outline" size={64} color="#FF6B6B" />
+                    <Text style={styles.emptyTitle}>Something went wrong</Text>
+                    <Text style={styles.emptyText}>{error.message}</Text>
+                    <TouchableOpacity style={styles.retryButton} onPress={refetch}>
+                        <Text style={styles.retryText}>Try Again</Text>
+                    </TouchableOpacity>
+                </View>
+            )}
+
+            {/* Results */}
+            {!loading && !error && (
+                <FlatList
+                    data={movies}
+                    keyExtractor={(item) => item.id.toString()}
+                    numColumns={3}
+                    columnWrapperStyle={styles.columnWrapper}
+                    contentContainerStyle={styles.listContent}
+                    showsVerticalScrollIndicator={false}
+                    renderItem={({ item, index }) => (
+                        <MovieCard movie={item} index={index} />
                     )}
-                </View>
-
-                {/* Search Results Header */}
-                {searchQuery.trim() ? (
-                    <View style={styles.resultsHeader}>
-                        <Text style={styles.resultsTitle}>
-                            Search results for <Text style={styles.queryText}>{searchQuery}</Text>
-                        </Text>
-                    </View>
-                ) : (
-                    <View style={styles.resultsHeader}>
-                        <Text style={styles.resultsTitle}>Browse Movies</Text>
-                    </View>
-                )}
-
-                {/* Genre Filter */}
-                <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.genreContainer}
-                >
-                    {genres.map((genre) => (
-                        <TouchableOpacity
-                            key={genre}
-                            style={[
-                                styles.genreButton,
-                                selectedGenre === genre && styles.genreButtonActive,
-                            ]}
-                            onPress={() => setSelectedGenre(genre)}
-                            activeOpacity={0.7}
-                        >
-                            <Text
-                                style={[
-                                    styles.genreText,
-                                    selectedGenre === genre && styles.genreTextActive,
-                                ]}
-                            >
-                                {genre}
+                    ListEmptyComponent={
+                        <View style={styles.emptyContainer}>
+                            <Ionicons name="film-outline" size={64} color="#A8B5DB" />
+                            <Text style={styles.emptyTitle}>No movies found</Text>
+                            <Text style={styles.emptyText}>
+                                Try adjusting your search to find what you're looking for.
                             </Text>
-                        </TouchableOpacity>
-                    ))}
-                </ScrollView>
-
-                {/* Loading Indicator */}
-                {isSearching && (
-                    <View style={styles.loadingContainer}>
-                        <ActivityIndicator size="large" color="#AB8BFF" />
-                    </View>
-                )}
-
-                {/* Results */}
-                {!isSearching && (
-                    <>
-                        {filteredMovies.length > 0 ? (
-                            <View style={styles.moviesGrid}>
-                                {filteredMovies.map((movie, index) => (
-                                    <MovieCard key={movie.id} movie={movie} index={index} />
-                                ))}
-                            </View>
-                        ) : (
-                            <View style={styles.emptyContainer}>
-                                <Ionicons name="film-outline" size={64} color="#A8B5DB" />
-                                <Text style={styles.emptyTitle}>No movies found</Text>
-                                <Text style={styles.emptyText}>
-                                    Try adjusting your search or filter to find what you're looking for.
-                                </Text>
-                            </View>
-                        )}
-                    </>
-                )}
-
-                {/* Bottom spacing for tab bar */}
-                <View style={{ height: 120 }} />
-            </ScrollView>
+                        </View>
+                    }
+                />
+            )}
         </View>
     );
 };
@@ -269,8 +187,6 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#030014',
-    },
-    scrollContent: {
         paddingTop: 50,
     },
     logoContainer: {
@@ -349,41 +265,21 @@ const styles = StyleSheet.create({
     queryText: {
         color: '#AB8BFF',
     },
-    genreContainer: {
-        paddingHorizontal: 20,
-        marginBottom: 20,
-        gap: 8,
-    },
-    genreButton: {
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 20,
-        backgroundColor: '#1a1a2e',
-        marginRight: 8,
-        borderWidth: 1,
-        borderColor: '#2a2a3e',
-    },
-    genreButtonActive: {
-        backgroundColor: '#AB8BFF',
-        borderColor: '#AB8BFF',
-    },
-    genreText: {
-        color: '#A8B5DB',
-        fontSize: 13,
-        fontWeight: '500',
-    },
-    genreTextActive: {
-        color: '#000000',
-        fontWeight: '600',
-    },
     loadingContainer: {
-        paddingVertical: 40,
+        flex: 1,
+        justifyContent: 'center',
         alignItems: 'center',
     },
-    moviesGrid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
+    loadingText: {
+        color: '#A8B5DB',
+        marginTop: 12,
+        fontSize: 14,
+    },
+    listContent: {
         paddingHorizontal: 12,
+        paddingBottom: 120,
+    },
+    columnWrapper: {
         justifyContent: 'space-between',
     },
     movieCard: {
@@ -456,5 +352,16 @@ const styles = StyleSheet.create({
         fontSize: 14,
         textAlign: 'center',
         marginTop: 8,
+    },
+    retryButton: {
+        marginTop: 20,
+        paddingHorizontal: 24,
+        paddingVertical: 12,
+        backgroundColor: '#AB8BFF',
+        borderRadius: 20,
+    },
+    retryText: {
+        color: '#000000',
+        fontWeight: '600',
     },
 });

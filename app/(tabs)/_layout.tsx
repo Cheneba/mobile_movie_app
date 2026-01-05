@@ -1,6 +1,6 @@
-import { View, StyleSheet, Text } from 'react-native'
-import { Tabs } from 'expo-router'
-import { Ionicons } from '@expo/vector-icons'
+import { Ionicons } from '@expo/vector-icons';
+import { Tabs } from 'expo-router';
+import { StyleSheet, Text, View } from 'react-native';
 
 const TabIcon = ({ focused, icon, title }: { focused: boolean; icon: keyof typeof Ionicons.glyphMap; title: string }) => {
     if (focused) {
@@ -29,6 +29,7 @@ const _Layout = () => {
                     justifyContent: 'center',
                     alignItems: 'center',
                 },
+                sceneStyle: { backgroundColor: '#030014' },
             }}
         >
             <Tabs.Screen

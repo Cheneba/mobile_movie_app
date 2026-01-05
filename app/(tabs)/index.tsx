@@ -1,143 +1,97 @@
-import {
-    StyleSheet,
-    Text,
-    View,
-    ScrollView,
-    Image,
-    FlatList,
-    TouchableOpacity,
-    Dimensions,
-} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import {
+    ActivityIndicator,
+    Dimensions,
+    FlatList,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
+
+import {
+    fetchLatestMovies,
+    fetchPopularMovies,
+    formatRating,
+    getGenreNames,
+    getImageUrl,
+    Movie,
+} from '@/services/api';
+import useFetch from '@/services/useFetch';
 
 const { width } = Dimensions.get('window');
 
-// Mock data for movies
-const popularMovies = [
-    {
-        id: 1,
-        title: 'Gladiator II',
-        poster: 'https://image.tmdb.org/t/p/w500/2cxhvwyEwRlysAmRH4iodkvo0z5.jpg',
-        rating: 4.6,
-        genre: 'Action • Movie',
-    },
-    {
-        id: 2,
-        title: 'Mufasa: The Lion King',
-        poster: 'https://image.tmdb.org/t/p/w500/lurEK87kukWNaHd0zYnsi3yzJrs.jpg',
-        rating: 4.6,
-        genre: 'Action • Movie',
-    },
-    {
-        id: 3,
-        title: 'Moana 2',
-        poster: 'https://image.tmdb.org/t/p/w500/yh64qw9mgXBvlaWDi7Q9tpUBAvH.jpg',
-        rating: 4.6,
-        genre: 'Action • Movie',
-    },
-];
+const PopularMovieCard = ({ movie, index }: { movie: Movie; index: number }) => {
+    const genreNames = getGenreNames(movie.genre_ids);
+    const genreText = genreNames.length > 0 ? `${genreNames[0]} • Movie` : 'Movie';
 
-const latestMovies = [
-    {
-        id: 4,
-        title: 'Moana 2',
-        poster: 'https://image.tmdb.org/t/p/w500/yh64qw9mgXBvlaWDi7Q9tpUBAvH.jpg',
-        rating: 4.6,
-        genre: 'Action • Movie',
-    },
-    {
-        id: 5,
-        title: 'Venom: The Last...',
-        poster: 'https://image.tmdb.org/t/p/w500/aosm8NMQ3UyoBVpSxyimorCQykC.jpg',
-        rating: 4.6,
-        genre: 'Action • Movie',
-    },
-    {
-        id: 6,
-        title: 'Wicked',
-        poster: 'https://image.tmdb.org/t/p/w500/xDGbZ0JJ3mYaGKy4Nzd9Kph6M9L.jpg',
-        rating: 4.6,
-        genre: 'Action • Movie',
-    },
-    {
-        id: 7,
-        title: 'Werewolves',
-        poster: 'https://image.tmdb.org/t/p/w500/cRTctVlwvMdXVsaYbX5qfkittDP.jpg',
-        rating: 4.6,
-        genre: 'Action • Movie',
-    },
-    {
-        id: 8,
-        title: 'Aftermath...',
-        poster: 'https://image.tmdb.org/t/p/w500/euYIwmwkmz95mnXvufEmbL6ovhZ.jpg',
-        rating: 4.6,
-        genre: 'Action • Movie',
-    },
-    {
-        id: 9,
-        title: 'Red One...',
-        poster: 'https://image.tmdb.org/t/p/w500/cdqLnri3NEGcmfnqwk2TSIYtddg.jpg',
-        rating: 4.6,
-        genre: 'Action • Movie',
-    },
-    {
-        id: 10,
-        title: 'Gladiator II...',
-        poster: 'https://image.tmdb.org/t/p/w500/2cxhvwyEwRlysAmRH4iodkvo0z5.jpg',
-        rating: 4.6,
-        genre: 'Action • Movie',
-    },
-    {
-        id: 11,
-        title: 'Kraven the Hunter',
-        poster: 'https://image.tmdb.org/t/p/w500/i47IUSsN126K11JUzqQIOi1Mg1M.jpg',
-        rating: 4.6,
-        genre: 'Action • Movie',
-    },
-    {
-        id: 12,
-        title: 'Mufasa: The Lion...',
-        poster: 'https://image.tmdb.org/t/p/w500/lurEK87kukWNaHd0zYnsi3yzJrs.jpg',
-        rating: 4.6,
-        genre: 'Action • Movie',
-    },
-];
-
-const PopularMovieCard = ({ movie, index }: { movie: typeof popularMovies[0]; index: number }) => (
-    <TouchableOpacity
-        style={styles.popularCard}
-        onPress={() => router.push(`/movies/${movie.id}`)}
-    >
-        <View style={styles.popularImageContainer}>
-            <Image source={{ uri: movie.poster }} style={styles.popularImage} />
-            <View style={styles.ratingBadge}>
-                <Ionicons name="star" size={10} color="#FFD700" />
-                <Text style={styles.ratingText}>{movie.rating}</Text>
+    return (
+        <TouchableOpacity
+            style={styles.popularCard}
+            onPress={() => router.push(`/movies/${movie.id}`)}
+        >
+            <View style={styles.popularImageContainer}>
+                <Image
+                    source={{ uri: getImageUrl(movie.poster_path) }}
+                    style={styles.popularImage}
+                />
+                <View style={styles.ratingBadge}>
+                    <Ionicons name="star" size={10} color="#FFD700" />
+                    <Text style={styles.ratingText}>{formatRating(movie.vote_average)}</Text>
+                </View>
+                <Text style={styles.rankNumber}>{index + 1}</Text>
             </View>
-            <Text style={styles.rankNumber}>{index + 1}</Text>
-        </View>
-        <Text style={styles.popularTitle} numberOfLines={1}>{movie.title}</Text>
-        <Text style={styles.genreText}>{movie.genre}</Text>
-    </TouchableOpacity>
-);
+            <Text style={styles.popularTitle} numberOfLines={1}>
+                {movie.title}
+            </Text>
+            <Text style={styles.genreText}>{genreText}</Text>
+        </TouchableOpacity>
+    );
+};
 
-const MovieCard = ({ movie }: { movie: typeof latestMovies[0] }) => (
-    <TouchableOpacity
-        style={styles.movieCard}
-        onPress={() => router.push(`/movies/${movie.id}`)}
-    >
-        <Image source={{ uri: movie.poster }} style={styles.movieImage} />
-        <Text style={styles.movieTitle} numberOfLines={1}>{movie.title}</Text>
-        <View style={styles.movieRating}>
-            <Ionicons name="star" size={12} color="#FFD700" />
-            <Text style={styles.movieRatingText}>{movie.rating}</Text>
-        </View>
-        <Text style={styles.movieGenre}>{movie.genre}</Text>
-    </TouchableOpacity>
-);
+const MovieCard = ({ movie }: { movie: Movie }) => {
+    const genreNames = getGenreNames(movie.genre_ids);
+    const genreText = genreNames.length > 0 ? `${genreNames[0]} • Movie` : 'Movie';
+
+    return (
+        <TouchableOpacity
+            style={styles.movieCard}
+            onPress={() => router.push(`/movies/${movie.id}`)}
+        >
+            <Image
+                source={{ uri: getImageUrl(movie.poster_path) }}
+                style={styles.movieImage}
+            />
+            <Text style={styles.movieTitle} numberOfLines={1}>
+                {movie.title}
+            </Text>
+            <View style={styles.movieRating}>
+                <Ionicons name="star" size={12} color="#FFD700" />
+                <Text style={styles.movieRatingText}>{formatRating(movie.vote_average)}</Text>
+            </View>
+            <Text style={styles.movieGenre}>{genreText}</Text>
+        </TouchableOpacity>
+    );
+};
 
 const Home = () => {
+    const {
+        data: popularMovies,
+        loading: popularLoading,
+        error: popularError,
+    } = useFetch<Movie[]>(fetchPopularMovies);
+
+    const {
+        data: latestMovies,
+        loading: latestLoading,
+        error: latestError,
+    } = useFetch<Movie[]>(fetchLatestMovies);
+
+    const loading = popularLoading || latestLoading;
+
     return (
         <View style={styles.container}>
             <ScrollView
@@ -165,30 +119,50 @@ const Home = () => {
                     </Text>
                 </TouchableOpacity>
 
+                {/* Loading State */}
+                {loading && (
+                    <View style={styles.loadingContainer}>
+                        <ActivityIndicator size="large" color="#AB8BFF" />
+                        <Text style={styles.loadingText}>Loading movies...</Text>
+                    </View>
+                )}
+
                 {/* Popular Movies Section */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Popular movies</Text>
-                    <FlatList
-                        data={popularMovies}
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        keyExtractor={(item) => item.id.toString()}
-                        renderItem={({ item, index }) => (
-                            <PopularMovieCard movie={item} index={index} />
-                        )}
-                        contentContainerStyle={styles.popularList}
-                    />
-                </View>
+                {!popularLoading && !popularError && popularMovies && (
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Popular movies</Text>
+                        <FlatList
+                            data={popularMovies.slice(0, 5)}
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            keyExtractor={(item) => item.id.toString()}
+                            renderItem={({ item, index }) => (
+                                <PopularMovieCard movie={item} index={index} />
+                            )}
+                            contentContainerStyle={styles.popularList}
+                        />
+                    </View>
+                )}
 
                 {/* Latest Movies Section */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Latest movies</Text>
-                    <View style={styles.latestGrid}>
-                        {latestMovies.map((movie) => (
-                            <MovieCard key={movie.id} movie={movie} />
-                        ))}
+                {!latestLoading && !latestError && latestMovies && (
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Latest movies</Text>
+                        <View style={styles.latestGrid}>
+                            {latestMovies.slice(0, 9).map((movie) => (
+                                <MovieCard key={movie.id} movie={movie} />
+                            ))}
+                        </View>
                     </View>
-                </View>
+                )}
+
+                {/* Error State */}
+                {(popularError || latestError) && !loading && (
+                    <View style={styles.errorContainer}>
+                        <Ionicons name="alert-circle-outline" size={48} color="#FF6B6B" />
+                        <Text style={styles.errorText}>Failed to load movies</Text>
+                    </View>
+                )}
 
                 {/* Bottom spacing for tab bar */}
                 <View style={{ height: 100 }} />
@@ -373,5 +347,23 @@ const styles = StyleSheet.create({
         color: '#A8B5DB',
         fontSize: 10,
         marginTop: 2,
+    },
+    loadingContainer: {
+        paddingVertical: 60,
+        alignItems: 'center',
+    },
+    loadingText: {
+        color: '#A8B5DB',
+        marginTop: 12,
+        fontSize: 14,
+    },
+    errorContainer: {
+        paddingVertical: 60,
+        alignItems: 'center',
+    },
+    errorText: {
+        color: '#A8B5DB',
+        marginTop: 12,
+        fontSize: 14,
     },
 });

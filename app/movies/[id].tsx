@@ -1,7 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Linking from 'expo-linking';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
+    ActivityIndicator,
     Dimensions,
     Image,
     ImageBackground,
@@ -12,193 +14,90 @@ import {
     View,
 } from 'react-native';
 
-const { width, height } = Dimensions.get('window');
+import {
+    fetchMovieCredits,
+    fetchMovieDetails,
+    fetchWatchProviders,
+    formatRating,
+    getImageUrl,
+    getProviderLogoUrl,
+    MovieCredits,
+    MovieDetails as MovieDetailsType,
+    WatchProviderData,
+} from '@/services/api';
+import useFetch from '@/services/useFetch';
 
-// Mock movie data - in a real app, this would come from an API
-const moviesData: Record<string, Movie> = {
-    '1': {
-        id: 1,
-        title: 'Venom: The Last Dance',
-        poster: 'https://image.tmdb.org/t/p/w500/aosm8NMQ3UyoBVpSxyimorCQykC.jpg',
-        backdrop: 'https://image.tmdb.org/t/p/w1280/aosm8NMQ3UyoBVpSxyimorCQykC.jpg',
-        rating: 4.6,
-        year: 2024,
-        duration: '1h 49m',
-        genres: ['Action', 'Sci-Fi', 'Adventure'],
-        overview: 'Eddie and Venom are on the run. Hunted by both of their worlds and with the net closing in, the duo are forced into a devastating decision that will bring the curtains down on Venom and Eddie\'s last dance.',
-        director: 'Kelly Marcel',
-        cast: [
-            { name: 'Tom Hardy', role: 'Eddie Brock', image: 'https://image.tmdb.org/t/p/w185/d81K0RH8UX7tZj49tZaQhZ9ewH.jpg' },
-            { name: 'Chiwetel Ejiofor', role: 'Rex Strickland', image: 'https://image.tmdb.org/t/p/w185/kq5DDnqqofoRI0t6ddtRvHuo7uk.jpg' },
-            { name: 'Juno Temple', role: 'Dr. Teddy Paine', image: 'https://image.tmdb.org/t/p/w185/bTtQmkXHeP4fDPoHlHaOYFCe7Y7.jpg' },
-        ],
-    },
-    '2': {
-        id: 2,
-        title: 'Moana 2',
-        poster: 'https://image.tmdb.org/t/p/w500/yh64qw9mgXBvlaWDi7Q9tpUBAvH.jpg',
-        backdrop: 'https://image.tmdb.org/t/p/w1280/yh64qw9mgXBvlaWDi7Q9tpUBAvH.jpg',
-        rating: 4.6,
-        year: 2024,
-        duration: '1h 40m',
-        genres: ['Adventure', 'Animation', 'Comedy'],
-        overview: 'After receiving an unexpected call from her wayfinding ancestors, Moana journeys alongside Maui and a new crew to the far seas of Oceania and into dangerous, long-lost waters for an adventure unlike anything she has ever faced.',
-        director: 'David Derrick Jr.',
-        cast: [
-            { name: 'Auli\'i Cravalho', role: 'Moana', image: 'https://image.tmdb.org/t/p/w185/hcywmwqzRPatbKvPfBaVQJlvYgF.jpg' },
-            { name: 'Dwayne Johnson', role: 'Maui', image: 'https://image.tmdb.org/t/p/w185/kuqFzlYMc2IrsOyPznMd1FroeGq.jpg' },
-        ],
-    },
-    '3': {
-        id: 3,
-        title: 'Wicked',
-        poster: 'https://image.tmdb.org/t/p/w500/xDGbZ0JJ3mYaGKy4Nzd9Kph6M9L.jpg',
-        backdrop: 'https://image.tmdb.org/t/p/w1280/xDGbZ0JJ3mYaGKy4Nzd9Kph6M9L.jpg',
-        rating: 4.6,
-        year: 2024,
-        duration: '2h 40m',
-        genres: ['Musical', 'Fantasy', 'Romance'],
-        overview: 'Elphaba, a young woman misunderstood because of her green skin, and Glinda, a popular girl, become friends at Shiz University in the Land of Oz. After an encounter with the Wizard of Oz, their friendship reaches a crossroads.',
-        director: 'Jon M. Chu',
-        cast: [
-            { name: 'Cynthia Erivo', role: 'Elphaba', image: 'https://image.tmdb.org/t/p/w185/vHLCSHsmVwjTPO7NQSZ3HRrCGaH.jpg' },
-            { name: 'Ariana Grande', role: 'Glinda', image: 'https://image.tmdb.org/t/p/w185/dMXyNi8WZbOvUQQE2ZTjDMB8sWN.jpg' },
-        ],
-    },
-    '4': {
-        id: 4,
-        title: 'Werewolves',
-        poster: 'https://image.tmdb.org/t/p/w500/cRTctVlwvMdXVsaYbX5qfkittDP.jpg',
-        backdrop: 'https://image.tmdb.org/t/p/w1280/cRTctVlwvMdXVsaYbX5qfkittDP.jpg',
-        rating: 4.6,
-        year: 2024,
-        duration: '1h 33m',
-        genres: ['Horror', 'Action', 'Thriller'],
-        overview: 'A year after a supermoon triggered a worldwide werewolf apocalypse, a small town struggles to survive as monstrous werewolves hunt under the light of the full moon.',
-        director: 'Steven C. Miller',
-        cast: [
-            { name: 'Frank Grillo', role: 'Lead', image: 'https://image.tmdb.org/t/p/w185/6BHtapvPgEpMYd9GjkVi3TLAsHB.jpg' },
-        ],
-    },
-    '5': {
-        id: 5,
-        title: 'Aftermath',
-        poster: 'https://image.tmdb.org/t/p/w500/euYIwmwkmz95mnXvufEmbL6ovhZ.jpg',
-        backdrop: 'https://image.tmdb.org/t/p/w1280/euYIwmwkmz95mnXvufEmbL6ovhZ.jpg',
-        rating: 4.6,
-        year: 2024,
-        duration: '1h 45m',
-        genres: ['Action', 'Thriller'],
-        overview: 'A gripping action thriller that follows survivors navigating the devastating aftermath of a catastrophic event.',
-        director: 'Patrick Lussier',
-        cast: [],
-    },
-    '6': {
-        id: 6,
-        title: 'Red One',
-        poster: 'https://image.tmdb.org/t/p/w500/cdqLnri3NEGcmfnqwk2TSIYtddg.jpg',
-        backdrop: 'https://image.tmdb.org/t/p/w1280/cdqLnri3NEGcmfnqwk2TSIYtddg.jpg',
-        rating: 4.6,
-        year: 2024,
-        duration: '2h 3m',
-        genres: ['Action', 'Comedy', 'Fantasy'],
-        overview: 'After Santa Claus is kidnapped, the North Pole\'s Head of Security must team up with the world\'s most infamous bounty hunter in a globe-trotting, action-packed mission to save Christmas.',
-        director: 'Jake Kasdan',
-        cast: [
-            { name: 'Dwayne Johnson', role: 'Callum Drift', image: 'https://image.tmdb.org/t/p/w185/kuqFzlYMc2IrsOyPznMd1FroeGq.jpg' },
-            { name: 'Chris Evans', role: 'Jack O\'Malley', image: 'https://image.tmdb.org/t/p/w185/3bOGNsHlrswhyW79uvIHH1V43JI.jpg' },
-            { name: 'J.K. Simmons', role: 'Santa Claus', image: 'https://image.tmdb.org/t/p/w185/oHenEanX6m77EpKg0r6ypWGpdzR.jpg' },
-        ],
-    },
-    '7': {
-        id: 7,
-        title: 'Gladiator II',
-        poster: 'https://image.tmdb.org/t/p/w500/2cxhvwyEwRlysAmRH4iodkvo0z5.jpg',
-        backdrop: 'https://image.tmdb.org/t/p/w1280/2cxhvwyEwRlysAmRH4iodkvo0z5.jpg',
-        rating: 4.6,
-        year: 2024,
-        duration: '2h 28m',
-        genres: ['Action', 'Adventure', 'Drama'],
-        overview: 'Years after witnessing the death of the revered hero Maximus at the hands of his uncle, Lucius is forced to enter the Colosseum after his home is conquered by the tyrannical Emperors who now lead Rome with an iron fist.',
-        director: 'Ridley Scott',
-        cast: [
-            { name: 'Paul Mescal', role: 'Lucius', image: 'https://image.tmdb.org/t/p/w185/eMwrSvPVqWpYvD44EGJGGDVVFfO.jpg' },
-            { name: 'Pedro Pascal', role: 'Marcus Acacius', image: 'https://image.tmdb.org/t/p/w185/dBOrm29cr7NAt1XTq9hfhKnLCBY.jpg' },
-            { name: 'Denzel Washington', role: 'Macrinus', image: 'https://image.tmdb.org/t/p/w185/khMf8LLTtppUwuNqqRc7lnR7Rof.jpg' },
-        ],
-    },
-    '8': {
-        id: 8,
-        title: 'Kraven the Hunter',
-        poster: 'https://image.tmdb.org/t/p/w500/i47IUSsN126K11JUzqQIOi1Mg1M.jpg',
-        backdrop: 'https://image.tmdb.org/t/p/w1280/i47IUSsN126K11JUzqQIOi1Mg1M.jpg',
-        rating: 4.6,
-        year: 2024,
-        duration: '2h 7m',
-        genres: ['Action', 'Adventure', 'Sci-Fi'],
-        overview: 'Russian immigrant Sergei Kravinoff is on a mission to prove that he is the greatest hunter in the world.',
-        director: 'J.C. Chandor',
-        cast: [
-            { name: 'Aaron Taylor-Johnson', role: 'Sergei Kravinoff', image: 'https://image.tmdb.org/t/p/w185/qvYMyDoQAp6Gs9N1CXVP1EgLmj5.jpg' },
-            { name: 'Russell Crowe', role: 'Nikolai Kravinoff', image: 'https://image.tmdb.org/t/p/w185/uxiYYxBwiPYMudEreSYl8JGlFGz.jpg' },
-        ],
-    },
-    '9': {
-        id: 9,
-        title: 'Mufasa: The Lion King',
-        poster: 'https://image.tmdb.org/t/p/w500/lurEK87kukWNaHd0zYnsi3yzJrs.jpg',
-        backdrop: 'https://image.tmdb.org/t/p/w1280/lurEK87kukWNaHd0zYnsi3yzJrs.jpg',
-        rating: 4.6,
-        year: 2024,
-        duration: '1h 58m',
-        genres: ['Adventure', 'Animation', 'Drama'],
-        overview: 'Told in flashbacks, Mufasa is an orphaned cub, lost and alone until he meets a sympathetic lion named Taka—the heir to a royal bloodline. The chance meeting sets in motion a journey of misfits searching for their destiny.',
-        director: 'Barry Jenkins',
-        cast: [
-            { name: 'Aaron Pierre', role: 'Mufasa', image: 'https://image.tmdb.org/t/p/w185/6EKnTyVSLB7dYlDLgeYMjIXH1we.jpg' },
-            { name: 'Kelvin Harrison Jr.', role: 'Taka', image: 'https://image.tmdb.org/t/p/w185/hdGnOvroMMIqD2cZlBpGMJ20pki.jpg' },
-        ],
-    },
+const { height } = Dimensions.get('window');
+
+// Helper to format runtime
+const formatRuntime = (minutes: number | null): string => {
+    if (!minutes) return 'N/A';
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hours}h ${mins}m`;
 };
 
-interface CastMember {
-    name: string;
-    role: string;
-    image: string;
-}
-
-interface Movie {
-    id: number;
-    title: string;
-    poster: string;
-    backdrop: string;
-    rating: number;
-    year: number;
-    duration: string;
-    genres: string[];
-    overview: string;
-    director: string;
-    cast: CastMember[];
-}
-
-// Default movie if ID not found
-const defaultMovie: Movie = {
-    id: 0,
-    title: 'Movie Not Found',
-    poster: 'https://image.tmdb.org/t/p/w500/aosm8NMQ3UyoBVpSxyimorCQykC.jpg',
-    backdrop: 'https://image.tmdb.org/t/p/w1280/aosm8NMQ3UyoBVpSxyimorCQykC.jpg',
-    rating: 0,
-    year: 2024,
-    duration: 'N/A',
-    genres: [],
-    overview: 'Movie details not available.',
-    director: 'Unknown',
-    cast: [],
+// Helper to get year from release date
+const getYear = (date: string): string => {
+    if (!date) return 'N/A';
+    return new Date(date).getFullYear().toString();
 };
 
 const MovieDetails = () => {
     const { id } = useLocalSearchParams<{ id: string }>();
-    const movie = moviesData[id || ''] || defaultMovie;
+    const movieId = parseInt(id || '0', 10);
+
+    const {
+        data: movie,
+        loading: movieLoading,
+        error: movieError,
+    } = useFetch<MovieDetailsType>(() => fetchMovieDetails(movieId), true);
+
+    const {
+        data: credits,
+        loading: creditsLoading,
+    } = useFetch<MovieCredits>(() => fetchMovieCredits(movieId), true);
+
+    const {
+        data: watchProviders,
+        loading: providersLoading,
+    } = useFetch<WatchProviderData | null>(() => fetchWatchProviders(movieId), true);
+
+    const loading = movieLoading || creditsLoading;
+
+    // Get director from crew
+    const director = credits?.crew?.find((member) => member.job === 'Director')?.name || 'Unknown';
+
+    // Get top cast members
+    const cast = credits?.cast?.slice(0, 10) || [];
+
+    if (loading) {
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#AB8BFF" />
+                <Text style={styles.loadingText}>Loading movie details...</Text>
+            </View>
+        );
+    }
+
+    if (movieError || !movie) {
+        return (
+            <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle-outline" size={64} color="#FF6B6B" />
+                <Text style={styles.errorTitle}>Failed to load movie</Text>
+                <Text style={styles.errorText}>
+                    {movieError?.message || 'Something went wrong'}
+                </Text>
+                <TouchableOpacity
+                    style={styles.backButtonError}
+                    onPress={() => router.back()}
+                >
+                    <Ionicons name="arrow-back" size={20} color="#000" />
+                    <Text style={styles.backButtonText}>Go Back</Text>
+                </TouchableOpacity>
+            </View>
+        );
+    }
 
     return (
         <View style={styles.container}>
@@ -210,7 +109,7 @@ const MovieDetails = () => {
                 {/* Hero Section with Backdrop */}
                 <View style={styles.heroContainer}>
                     <ImageBackground
-                        source={{ uri: movie.backdrop }}
+                        source={{ uri: getImageUrl(movie.backdrop_path || movie.poster_path, 'w780') }}
                         style={styles.backdrop}
                         resizeMode="cover"
                     >
@@ -240,7 +139,7 @@ const MovieDetails = () => {
                     {/* Movie Poster */}
                     <View style={styles.posterContainer}>
                         <Image
-                            source={{ uri: movie.poster }}
+                            source={{ uri: getImageUrl(movie.poster_path) }}
                             style={styles.poster}
                             resizeMode="cover"
                         />
@@ -256,25 +155,27 @@ const MovieDetails = () => {
                     <View style={styles.metaContainer}>
                         <View style={styles.metaItem}>
                             <Ionicons name="calendar-outline" size={14} color="#A8B5DB" />
-                            <Text style={styles.metaText}>{movie.year}</Text>
+                            <Text style={styles.metaText}>{getYear(movie.release_date)}</Text>
                         </View>
                         <View style={styles.metaDivider} />
                         <View style={styles.metaItem}>
                             <Ionicons name="time-outline" size={14} color="#A8B5DB" />
-                            <Text style={styles.metaText}>{movie.duration}</Text>
+                            <Text style={styles.metaText}>{formatRuntime(movie.runtime)}</Text>
                         </View>
                         <View style={styles.metaDivider} />
                         <View style={styles.ratingContainer}>
                             <Ionicons name="star" size={14} color="#FFD700" />
-                            <Text style={styles.ratingText}>{movie.rating}/5</Text>
+                            <Text style={styles.ratingText}>
+                                {formatRating(movie.vote_average)}/5
+                            </Text>
                         </View>
                     </View>
 
                     {/* Genres */}
                     <View style={styles.genresContainer}>
-                        {movie.genres.map((genre, index) => (
-                            <View key={index} style={styles.genreTag}>
-                                <Text style={styles.genreText}>{genre}</Text>
+                        {movie.genres?.map((genre) => (
+                            <View key={genre.id} style={styles.genreTag}>
+                                <Text style={styles.genreText}>{genre.name}</Text>
                             </View>
                         ))}
                     </View>
@@ -282,17 +183,19 @@ const MovieDetails = () => {
                     {/* Overview Section */}
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>Overview</Text>
-                        <Text style={styles.overview}>{movie.overview}</Text>
+                        <Text style={styles.overview}>
+                            {movie.overview || 'No overview available.'}
+                        </Text>
                     </View>
 
                     {/* Director */}
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>Director</Text>
-                        <Text style={styles.directorText}>{movie.director}</Text>
+                        <Text style={styles.directorText}>{director}</Text>
                     </View>
 
                     {/* Cast Section */}
-                    {movie.cast.length > 0 && (
+                    {cast.length > 0 && (
                         <View style={styles.section}>
                             <Text style={styles.sectionTitle}>Cast</Text>
                             <ScrollView
@@ -300,17 +203,19 @@ const MovieDetails = () => {
                                 showsHorizontalScrollIndicator={false}
                                 contentContainerStyle={styles.castContainer}
                             >
-                                {movie.cast.map((member, index) => (
-                                    <View key={index} style={styles.castCard}>
+                                {cast.map((member) => (
+                                    <View key={member.id} style={styles.castCard}>
                                         <Image
-                                            source={{ uri: member.image }}
+                                            source={{
+                                                uri: getImageUrl(member.profile_path, 'w185'),
+                                            }}
                                             style={styles.castImage}
                                         />
                                         <Text style={styles.castName} numberOfLines={1}>
                                             {member.name}
                                         </Text>
                                         <Text style={styles.castRole} numberOfLines={1}>
-                                            {member.role}
+                                            {member.character}
                                         </Text>
                                     </View>
                                 ))}
@@ -318,11 +223,131 @@ const MovieDetails = () => {
                         </View>
                     )}
 
-                    {/* Play Button */}
-                    <TouchableOpacity style={styles.playButton} activeOpacity={0.8}>
-                        <Ionicons name="play" size={24} color="#000000" />
-                        <Text style={styles.playButtonText}>Watch Now</Text>
-                    </TouchableOpacity>
+                    {/* Where to Watch Section */}
+                    {watchProviders && (watchProviders.flatrate || watchProviders.rent || watchProviders.buy) && (
+                        <View style={styles.section}>
+                            <Text style={styles.sectionTitle}>Where to Watch</Text>
+                            
+                            {/* Streaming */}
+                            {watchProviders.flatrate && watchProviders.flatrate.length > 0 && (
+                                <View style={styles.providerSection}>
+                                    <View style={styles.providerLabelContainer}>
+                                        <Ionicons name="play-circle" size={16} color="#4CAF50" />
+                                        <Text style={styles.providerLabel}>Stream</Text>
+                                    </View>
+                                    <ScrollView
+                                        horizontal
+                                        showsHorizontalScrollIndicator={false}
+                                        contentContainerStyle={styles.providersRow}
+                                    >
+                                        {watchProviders.flatrate.map((provider) => (
+                                            <TouchableOpacity
+                                                key={provider.provider_id}
+                                                style={styles.providerCard}
+                                                onPress={() => watchProviders.link && Linking.openURL(watchProviders.link)}
+                                                activeOpacity={0.7}
+                                            >
+                                                <Image
+                                                    source={{ uri: getProviderLogoUrl(provider.logo_path) }}
+                                                    style={styles.providerLogo}
+                                                />
+                                                <Text style={styles.providerName} numberOfLines={1}>
+                                                    {provider.provider_name}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </ScrollView>
+                                </View>
+                            )}
+
+                            {/* Rent */}
+                            {watchProviders.rent && watchProviders.rent.length > 0 && (
+                                <View style={styles.providerSection}>
+                                    <View style={styles.providerLabelContainer}>
+                                        <Ionicons name="pricetag" size={16} color="#FF9800" />
+                                        <Text style={styles.providerLabel}>Rent</Text>
+                                    </View>
+                                    <ScrollView
+                                        horizontal
+                                        showsHorizontalScrollIndicator={false}
+                                        contentContainerStyle={styles.providersRow}
+                                    >
+                                        {watchProviders.rent.map((provider) => (
+                                            <TouchableOpacity
+                                                key={provider.provider_id}
+                                                style={styles.providerCard}
+                                                onPress={() => watchProviders.link && Linking.openURL(watchProviders.link)}
+                                                activeOpacity={0.7}
+                                            >
+                                                <Image
+                                                    source={{ uri: getProviderLogoUrl(provider.logo_path) }}
+                                                    style={styles.providerLogo}
+                                                />
+                                                <Text style={styles.providerName} numberOfLines={1}>
+                                                    {provider.provider_name}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </ScrollView>
+                                </View>
+                            )}
+
+                            {/* Buy */}
+                            {watchProviders.buy && watchProviders.buy.length > 0 && (
+                                <View style={styles.providerSection}>
+                                    <View style={styles.providerLabelContainer}>
+                                        <Ionicons name="cart" size={16} color="#2196F3" />
+                                        <Text style={styles.providerLabel}>Buy</Text>
+                                    </View>
+                                    <ScrollView
+                                        horizontal
+                                        showsHorizontalScrollIndicator={false}
+                                        contentContainerStyle={styles.providersRow}
+                                    >
+                                        {watchProviders.buy.map((provider) => (
+                                            <TouchableOpacity
+                                                key={provider.provider_id}
+                                                style={styles.providerCard}
+                                                onPress={() => watchProviders.link && Linking.openURL(watchProviders.link)}
+                                                activeOpacity={0.7}
+                                            >
+                                                <Image
+                                                    source={{ uri: getProviderLogoUrl(provider.logo_path) }}
+                                                    style={styles.providerLogo}
+                                                />
+                                                <Text style={styles.providerName} numberOfLines={1}>
+                                                    {provider.provider_name}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </ScrollView>
+                                </View>
+                            )}
+
+                            <Text style={styles.providerAttribution}>
+                                Data provided by JustWatch
+                            </Text>
+                        </View>
+                    )}
+
+                    {/* Watch Now Button */}
+                    {watchProviders?.link ? (
+                        <TouchableOpacity
+                            style={styles.playButton}
+                            activeOpacity={0.8}
+                            onPress={() => Linking.openURL(watchProviders.link!)}
+                        >
+                            <Ionicons name="play" size={24} color="#000000" />
+                            <Text style={styles.playButtonText}>Watch Now</Text>
+                        </TouchableOpacity>
+                    ) : (
+                        <View style={styles.noProvidersContainer}>
+                            <Ionicons name="information-circle-outline" size={20} color="#A8B5DB" />
+                            <Text style={styles.noProvidersText}>
+                                Not available for streaming in your region
+                            </Text>
+                        </View>
+                    )}
                 </View>
             </ScrollView>
         </View>
@@ -335,6 +360,50 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#030014',
+    },
+    loadingContainer: {
+        flex: 1,
+        backgroundColor: '#030014',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    loadingText: {
+        color: '#A8B5DB',
+        marginTop: 12,
+        fontSize: 14,
+    },
+    errorContainer: {
+        flex: 1,
+        backgroundColor: '#030014',
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 40,
+    },
+    errorTitle: {
+        color: '#FFFFFF',
+        fontSize: 20,
+        fontWeight: 'bold',
+        marginTop: 16,
+    },
+    errorText: {
+        color: '#A8B5DB',
+        fontSize: 14,
+        textAlign: 'center',
+        marginTop: 8,
+    },
+    backButtonError: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#AB8BFF',
+        paddingHorizontal: 20,
+        paddingVertical: 12,
+        borderRadius: 20,
+        marginTop: 24,
+        gap: 8,
+    },
+    backButtonText: {
+        color: '#000',
+        fontWeight: '600',
     },
     scrollContent: {
         paddingBottom: 40,
@@ -512,5 +581,58 @@ const styles = StyleSheet.create({
         color: '#000000',
         fontSize: 16,
         fontWeight: 'bold',
+    },
+    providerSection: {
+        marginBottom: 16,
+    },
+    providerLabelContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginBottom: 10,
+    },
+    providerLabel: {
+        color: '#FFFFFF',
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    providersRow: {
+        gap: 12,
+    },
+    providerCard: {
+        alignItems: 'center',
+        width: 70,
+    },
+    providerLogo: {
+        width: 50,
+        height: 50,
+        borderRadius: 10,
+        marginBottom: 6,
+        backgroundColor: '#1a1a2e',
+    },
+    providerName: {
+        color: '#A8B5DB',
+        fontSize: 10,
+        textAlign: 'center',
+    },
+    providerAttribution: {
+        color: '#666',
+        fontSize: 10,
+        textAlign: 'center',
+        marginTop: 8,
+    },
+    noProvidersContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 16,
+        gap: 8,
+        backgroundColor: '#1a1a2e',
+        borderRadius: 12,
+        marginTop: 10,
+    },
+    noProvidersText: {
+        color: '#A8B5DB',
+        fontSize: 13,
     },
 });
