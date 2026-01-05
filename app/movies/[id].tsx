@@ -14,6 +14,7 @@ import {
     View,
 } from 'react-native';
 
+import { useSavedMovies } from '@/context/SavedMoviesContext';
 import {
     fetchMovieCredits,
     fetchMovieDetails,
@@ -21,6 +22,7 @@ import {
     formatRating,
     getImageUrl,
     getProviderLogoUrl,
+    Movie,
     MovieCredits,
     MovieDetails as MovieDetailsType,
     WatchProviderData,
@@ -46,6 +48,7 @@ const getYear = (date: string): string => {
 const MovieDetails = () => {
     const { id } = useLocalSearchParams<{ id: string }>();
     const movieId = parseInt(id || '0', 10);
+    const { isMovieSaved, toggleSaveMovie } = useSavedMovies();
 
     const {
         data: movie,
@@ -70,6 +73,32 @@ const MovieDetails = () => {
 
     // Get top cast members
     const cast = credits?.cast?.slice(0, 10) || [];
+
+    // Check if movie is saved
+    const isSaved = isMovieSaved(movieId);
+
+    // Convert MovieDetails to Movie for saving
+    const handleToggleSave = () => {
+        if (movie) {
+            const movieToSave: Movie = {
+                id: movie.id,
+                title: movie.title,
+                original_title: movie.original_title,
+                overview: movie.overview,
+                poster_path: movie.poster_path,
+                backdrop_path: movie.backdrop_path,
+                release_date: movie.release_date,
+                vote_average: movie.vote_average,
+                vote_count: movie.vote_count,
+                popularity: movie.popularity,
+                genre_ids: movie.genres?.map(g => g.id) || [],
+                adult: movie.adult,
+                video: movie.video,
+                original_language: movie.original_language,
+            };
+            toggleSaveMovie(movieToSave);
+        }
+    };
 
     if (loading) {
         return (
@@ -130,10 +159,15 @@ const MovieDetails = () => {
 
                     {/* Bookmark Button */}
                     <TouchableOpacity
-                        style={styles.bookmarkButton}
+                        style={[styles.bookmarkButton, isSaved && styles.bookmarkButtonActive]}
+                        onPress={handleToggleSave}
                         activeOpacity={0.7}
                     >
-                        <Ionicons name="bookmark-outline" size={24} color="#FFFFFF" />
+                        <Ionicons 
+                            name={isSaved ? "bookmark" : "bookmark-outline"} 
+                            size={24} 
+                            color={isSaved ? "#AB8BFF" : "#FFFFFF"} 
+                        />
                     </TouchableOpacity>
 
                     {/* Movie Poster */}
@@ -444,6 +478,9 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    bookmarkButtonActive: {
+        backgroundColor: 'rgba(171, 139, 255, 0.3)',
     },
     posterContainer: {
         position: 'absolute',

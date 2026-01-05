@@ -3,13 +3,12 @@ import { router } from 'expo-router';
 import {
     ActivityIndicator,
     Dimensions,
-    FlatList,
     Image,
     ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native';
 
 import {
@@ -30,24 +29,27 @@ const PopularMovieCard = ({ movie, index }: { movie: Movie; index: number }) => 
 
     return (
         <TouchableOpacity
-            style={styles.popularCard}
+            style={styles.movieCard}
             onPress={() => router.push(`/movies/${movie.id}`)}
+            activeOpacity={0.7}
         >
-            <View style={styles.popularImageContainer}>
+            <View style={styles.movieImageContainer}>
                 <Image
                     source={{ uri: getImageUrl(movie.poster_path) }}
-                    style={styles.popularImage}
+                    style={styles.movieImage}
                 />
-                <View style={styles.ratingBadge}>
-                    <Ionicons name="star" size={10} color="#FFD700" />
-                    <Text style={styles.ratingText}>{formatRating(movie.vote_average)}</Text>
+                <View style={styles.rankBadge}>
+                    <Text style={styles.rankText}>{index + 1}</Text>
                 </View>
-                <Text style={styles.rankNumber}>{index + 1}</Text>
             </View>
-            <Text style={styles.popularTitle} numberOfLines={1}>
+            <Text style={styles.movieTitle} numberOfLines={1}>
                 {movie.title}
             </Text>
-            <Text style={styles.genreText}>{genreText}</Text>
+            <View style={styles.movieRating}>
+                <Ionicons name="star" size={12} color="#FFD700" />
+                <Text style={styles.movieRatingText}>{formatRating(movie.vote_average)}</Text>
+            </View>
+            <Text style={styles.movieGenre}>{genreText}</Text>
         </TouchableOpacity>
     );
 };
@@ -61,10 +63,12 @@ const MovieCard = ({ movie }: { movie: Movie }) => {
             style={styles.movieCard}
             onPress={() => router.push(`/movies/${movie.id}`)}
         >
-            <Image
-                source={{ uri: getImageUrl(movie.poster_path) }}
-                style={styles.movieImage}
-            />
+            <View style={styles.movieImageContainer}>
+                <Image
+                    source={{ uri: getImageUrl(movie.poster_path) }}
+                    style={styles.movieImage}
+                />
+            </View>
             <Text style={styles.movieTitle} numberOfLines={1}>
                 {movie.title}
             </Text>
@@ -130,17 +134,12 @@ const Home = () => {
                 {/* Popular Movies Section */}
                 {!popularLoading && !popularError && popularMovies && (
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Popular movies</Text>
-                        <FlatList
-                            data={popularMovies.slice(0, 5)}
-                            horizontal
-                            showsHorizontalScrollIndicator={false}
-                            keyExtractor={(item) => item.id.toString()}
-                            renderItem={({ item, index }) => (
-                                <PopularMovieCard movie={item} index={index} />
-                            )}
-                            contentContainerStyle={styles.popularList}
-                        />
+                        <Text style={styles.sectionTitle}>Popular Movies</Text>
+                        <View style={styles.moviesGrid}>
+                            {popularMovies.slice(0, 9).map((movie, index) => (
+                                <PopularMovieCard key={movie.id} movie={movie} index={index} />
+                            ))}
+                        </View>
                     </View>
                 )}
 
@@ -253,65 +252,7 @@ const styles = StyleSheet.create({
         marginLeft: 20,
         marginBottom: 16,
     },
-    popularList: {
-        paddingLeft: 20,
-    },
-    popularCard: {
-        marginRight: 16,
-        width: 140,
-    },
-    popularImageContainer: {
-        position: 'relative',
-        width: 140,
-        height: 200,
-        borderRadius: 12,
-        overflow: 'hidden',
-    },
-    popularImage: {
-        width: '100%',
-        height: '100%',
-        borderRadius: 12,
-    },
-    ratingBadge: {
-        position: 'absolute',
-        top: 8,
-        right: 8,
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: 'rgba(0,0,0,0.7)',
-        paddingHorizontal: 6,
-        paddingVertical: 2,
-        borderRadius: 8,
-        gap: 2,
-    },
-    ratingText: {
-        color: '#FFFFFF',
-        fontSize: 10,
-        fontWeight: '600',
-    },
-    rankNumber: {
-        position: 'absolute',
-        bottom: 8,
-        left: 8,
-        color: '#FFFFFF',
-        fontSize: 48,
-        fontWeight: 'bold',
-        textShadowColor: 'rgba(0, 0, 0, 0.75)',
-        textShadowOffset: { width: 2, height: 2 },
-        textShadowRadius: 4,
-    },
-    popularTitle: {
-        color: '#FFFFFF',
-        fontSize: 14,
-        fontWeight: '600',
-        marginTop: 8,
-    },
-    genreText: {
-        color: '#A8B5DB',
-        fontSize: 12,
-        marginTop: 2,
-    },
-    latestGrid: {
+    moviesGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
         paddingHorizontal: 12,
@@ -322,10 +263,33 @@ const styles = StyleSheet.create({
         marginBottom: 16,
         marginHorizontal: 4,
     },
-    movieImage: {
+    movieImageContainer: {
+        position: 'relative',
         width: '100%',
         height: 150,
         borderRadius: 8,
+        overflow: 'hidden',
+    },
+    movieImage: {
+        width: '100%',
+        height: '100%',
+        borderRadius: 8,
+    },
+    rankBadge: {
+        position: 'absolute',
+        top: 6,
+        left: 6,
+        backgroundColor: '#AB8BFF',
+        width: 22,
+        height: 22,
+        borderRadius: 11,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    rankText: {
+        color: '#000000',
+        fontSize: 11,
+        fontWeight: 'bold',
     },
     movieTitle: {
         color: '#FFFFFF',
@@ -347,6 +311,12 @@ const styles = StyleSheet.create({
         color: '#A8B5DB',
         fontSize: 10,
         marginTop: 2,
+    },
+    latestGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        paddingHorizontal: 12,
+        justifyContent: 'space-between',
     },
     loadingContainer: {
         paddingVertical: 60,

@@ -1,19 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-const TabIcon = ({ focused, icon, title }: { focused: boolean; icon: keyof typeof Ionicons.glyphMap; title: string }) => {
+const TabIcon = ({ focused, icon }: { focused: boolean; icon: keyof typeof Ionicons.glyphMap }) => {
     if (focused) {
         return (
             <View style={styles.activeTabContainer}>
-                <Ionicons name={icon} size={15} color="#000" />
-                <Text style={styles.activeLabel}>{title}</Text>
+                <Ionicons name={icon} size={20} color="#151312" />
             </View>
         )
     }
     return (
         <View style={styles.inactiveTab}>
-            <Ionicons name={icon} size={24} color="#A8B5DB" />
+            <Ionicons name={icon} size={24} color="#A8A8A8" />
         </View>
     )
 }
@@ -38,7 +37,7 @@ const _Layout = () => {
                     title: 'Home',
                     headerShown: false,
                     tabBarIcon: ({ focused }) => (
-                        <TabIcon focused={focused} icon="home-outline" title="Home" />
+                        <TabIcon focused={focused} icon="home-outline" />
                     ),
                 }}
             />
@@ -48,7 +47,7 @@ const _Layout = () => {
                     title: 'Search',
                     headerShown: false,
                     tabBarIcon: ({ focused }) => (
-                        <TabIcon focused={focused} icon="search-outline" title="Search" />
+                        <TabIcon focused={focused} icon="search" />
                     ),
                 }}
             />
@@ -58,7 +57,7 @@ const _Layout = () => {
                     title: 'Saved',
                     headerShown: false,
                     tabBarIcon: ({ focused }) => (
-                        <TabIcon focused={focused} icon="bookmark-outline" title="Saved" />
+                        <TabIcon focused={focused} icon="bookmark-outline" />
                     ),
                 }}
             />
@@ -68,7 +67,7 @@ const _Layout = () => {
                     title: 'Profile',
                     headerShown: false,
                     tabBarIcon: ({ focused }) => (
-                        <TabIcon focused={focused} icon="person-outline" title="Profile" />
+                        <TabIcon focused={focused} icon="person-outline" />
                     ),
                 }}
             />
@@ -82,31 +81,23 @@ const styles = StyleSheet.create({
         borderRadius: 50,
         marginHorizontal: 20,
         marginBottom: 36,
+        paddingTop: 6,
         height: 52,
         position: 'absolute',
         borderTopWidth: 0,
         overflow: 'hidden',
     },
     activeTabContainer: {
-        flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: '#AB8BFF',
-        paddingHorizontal: 14,
-        paddingVertical: 10,
-        borderRadius: 50,
-        gap: 6,
-        height: 40,
-    },
-    activeLabel: {
-        color: '#000',
-        fontWeight: '600',
-        fontSize: 12,
+        width: 44,
+        height: 44,
+        borderRadius: 22,
     },
     inactiveTab: {
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 8,
     },
 })
 
